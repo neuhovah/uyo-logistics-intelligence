@@ -1,47 +1,21 @@
-[README.md](https://github.com/user-attachments/files/25413996/README.md)
-\# Uyo Urban Investment \& Logistics Intelligence
+Uyo Logistics Intelligence: A Spatial Econometric Analysis
+Live Web Map: [https://neuhovah.github.io/uyo-logistics-intelligence/]
 
+Project Overview:
+This repository contains a survey-grade WebGIS platform analyzing the spatial economy and logistics network of Uyo, Akwa Ibom State. It identifies high-value commercial agglomeration zones (Hotspots) and underserved residential expansion areas (Service Deserts) to optimize real estate investments and fleet routing.
 
+Technical Specifications:
+Geodetic Framework: WGS 84 / UTM Zone 32N (EPSG:32632)
 
-\*\*A Spatial Decision Support System (SDSS) for Last-Mile Optimization.\*\*
+Positional Accuracy: Horizontal RMSE of 2.14m (validated against 50cm satellite imagery).
 
+Statistical Engine: Getis-Ord Gi* (Local) executed in Analytical Mode.
 
+Tech Stack: QGIS, Python (speed_calculator.py), Leaflet.js, and Tailwind CSS.
 
-!\[Project Status](https://img.shields.io/badge/Status-Complete-success)
+Key Findings
+The "Congestion Tax": Ibom Plaza identified as an oversaturated logistics bottleneck.
 
-!\[Efficiency Gain](https://img.shields.io/badge/ROI-56.4%25-brightgreen)
+Blue Ocean Markets: Ring Road III and Mbiabong identified as high-density residential areas lacking commercial infrastructure.
 
-
-
-\## Project Overview
-
-This project leverages \*\*Spatial Econometrics\*\* and \*\*Graph Theory\*\* to optimize urban logistics in Uyo, Nigeria. By analyzing 80,723 building footprints and 5,200 road segments, we achieved a \*\*56% reduction\*\* in fleet mileage.
-
-
-
-\## Key Technologies
-
-\* \*\*QGIS 3.44:\*\* Advanced Cartography \& Topology Repair.
-
-\* \*\*Python (PyQGIS):\*\* Automated road impedance calculation.
-
-\* \*\*OpenRouteService:\*\* VRP \& TSP Solver algorithms.
-
-\* \*\*Getis-Ord Gi\*:\*\* Statistical Hotspot Analysis.
-
-
-
-\## Results
-
-\* \*\*Horizontal Accuracy:\*\* 2.14m RMSE (NSSDA Class 1).
-
-\* \*\*Operational Savings:\*\* ₦195,000 / vehicle / month.
-
-\* \*\*Coverage:\*\* 188 km² of topologically corrected network.
-
-
-
----
-
-\*Lead Engineer: \[Uso-essien Nsikan Eno]\*
-
+VRP Optimization: Graph-theory routing demonstrates a 56% efficiency gain over naive logistics models.
