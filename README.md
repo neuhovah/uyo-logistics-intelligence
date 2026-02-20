@@ -1,46 +1,34 @@
-\# Uyo Urban Investment \& Logistics Intelligence
+Uyo Urban Investment & Logistics Intelligence
+A Spatial Decision Support System (SDSS) and WebGIS for Last-Mile Optimization.
 
+!(https://img.shields.io/badge/Status-Complete-success)
 
+Live Interactive Map: https://neuhovah.github.io/uyo-logistics-intelligence/
 
-\*\*A Spatial Decision Support System (SDSS) for Last-Mile Optimization.\*\*
+Project Overview
+This repository contains a survey-grade WebGIS platform analyzing the spatial economy and logistics network of Uyo, Akwa Ibom State. Leveraging Spatial Econometrics and Graph Theory, the project identifies high-value commercial agglomeration zones (Hotspots) and underserved residential expansion areas (Service Deserts) to optimize real estate capital allocation and fleet routing.
 
+By analyzing 80,723 building footprints and 5,200 topologically corrected road segments across a 188.0 km² study area, the spatial model successfully achieved a 56% reduction in logistics fleet mileage.
 
+Key Findings & Results
+VRP Route Optimization: Graph-theory routing reduced the baseline delivery distance from 100.91 km to 44.42 km, demonstrating a 55.98% efficiency gain and generating operational savings of ₦195,250 / vehicle / month.
 
-!\[Project Status](https://img.shields.io/badge/Status-Complete-success)
+The "Congestion Tax": The Ibom Plaza core is empirically identified as an oversaturated logistics bottleneck experiencing severe traffic delays.
 
-!\[Efficiency Gain](https://img.shields.io/badge/ROI-56.4%25-brightgreen)
+Blue Ocean Markets: The Ring Road III corridor and Mbiabong axis are identified as high-density residential areas lacking commercial infrastructure, representing prime development targets.
 
+Technical Specifications
+Geodetic Framework: WGS 84 / UTM Zone 32N (EPSG:32632).
 
+Positional Accuracy: Horizontal RMSE of 2.14m (NSSDA Class 1), validated against 50cm high-resolution satellite imagery.
 
-\## Project Overview
+Statistical Engine: Getis-Ord Gi* (Local) executed in Analytical Mode.
 
-This project leverages \*\*Spatial Econometrics\*\* and \*\*Graph Theory\*\* to optimize urban logistics in Uyo, Nigeria. By analyzing 80,723 building footprints and 5,200 road segments, we achieved a \*\*56% reduction\*\* in fleet mileage.
+Tech Stack & Tooling
+Geospatial Processing: QGIS 3.34 (Advanced Cartography & Topology Repair).
 
+Network Algorithms: OpenRouteService (VRP & TSP Solvers) & Python (speed_calculator.py).
 
+WebGIS Frontend: Leaflet.js and Tailwind CSS (Data loaded asynchronously via variable-wrapped GeoJSON to bypass strict CORS hosting limits).
 
-\## Key Technologies
-
-\* \*\*QGIS 3.44:\*\* Advanced Cartography \& Topology Repair.
-
-\* \*\*Python (PyQGIS):\*\* Automated road impedance calculation.
-
-\* \*\*OpenRouteService:\*\* VRP \& TSP Solver algorithms.
-
-\* \*\*Getis-Ord Gi\*:\*\* Statistical Hotspot Analysis.
-
-
-
-\## Results
-
-\* \*\*Horizontal Accuracy:\*\* 2.14m RMSE (NSSDA Class 1).
-
-\* \*\*Operational Savings:\*\* ₦195,000 / vehicle / month.
-
-\* \*\*Coverage:\*\* 188 km² of topologically corrected network.
-
-
-
----
-
-\*Lead Engineer: \[Uso-essien Nsikan Eno]\*
-
+Lead Engineer: [Uso-essien Nsikan Eno]
