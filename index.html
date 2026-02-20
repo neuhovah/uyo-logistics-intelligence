@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">\
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uyo Prime | Integrated Spatial Intelligence</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script src="data/boundary.js"></script>
+    <script src="data/buildings.js"></script>
+    <script src="data/roads.js"></script>
+    <script src="data/hotspots.js"></script>
+    <script src="data/isochrones.js"></script>
+    <script src="data/route.js"></script>
+    <script src="data/poi.js"></script>
+    <script src="data/delivery_sequence.js"></script>
+
+    <style>
+        body { margin: 0; background-color: #0f172a; color: #e2e8f0; font-family: sans-serif; }
+        #map { height: 100vh; width: 100%; z-index: 1; }
+        
+        .dashboard-panel {
+            position: absolute; top: 20px; left: 20px; z-index: 2000;
+            background: rgba(15, 23, 42, 0.95); padding: 20px; border-radius: 12px;
+            border: 1px solid #334155; max-width: 320px;
+        }
+        
+        .leaflet-control-layers {
+            background-color: #1e293b !important;
+            border: 2px solid #38bdf8 !important;
+            color: #f8fafc !important;
+            border-radius: 8px !important;
+            padding: 10px !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-panel">
+        <h1 class="text-xl font-bold text-sky-400 mb-4">UYO PRIME <span class="text-white">.AI</span></h1>
+        
+        <div class="grid grid-cols-2 gap-3 mb-4">
+            <div class="bg-slate-800 p-3 rounded border border-slate-700 text-center">
+                <div class="text-2xl font-bold text-white">56%</div>
+                <div class="text-xs text-slate-400">VRP Efficiency</div>
+            </div>
+            <div class="bg-slate-800 p-3 rounded border-slate-700 text-center">
+                <div class="text-2xl font-bold text-white">₦195k</div>
+                <div class="text-xs text-slate-400">Monthly Savings</div>
+            </div>
+        </div>
+        <div class="text-xs text-slate-400 space-y-2">
+            <p><strong>System Status:</strong> <span class="text-emerald-400">Online</span></p>
+            <p>Toggle layers (bottom right) to visualize market density and logistical flow.</p>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <script>
+        
+         // --- 2. MAP SETUP ---
+        const map = L.map('map', {zoomControl: false}).setView([5.0377, 7.9128], 13);
+        L.control.zoom({position: 'bottomleft'}).addTo(map);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; CARTO', maxZoom: 20
+        }).addTo(map);
+
+        // --- 3. LAYER CREATION ---
+
+        // 1. Boundary (The Frame)
+        const boundaryLayer = L.geoJSON(boundaryData, {
+            style: { color: "#cbd5e1", weight: 2, fillOpacity: 0, dashArray: "10 5" }
+        });
+
+        // 2. Buildings
+        const bldLayer = L.geoJSON(buildingsData, {
+            style: { color: "#334155", weight: 0.5, fillOpacity: 0.2 }
+        });
+
+        // 3. Roads (Hierarchy)
+        const roadLayer = L.geoJSON(roadsData, {
+            style: function(feature) {
+                const type = feature.properties.highway;
+                if (type === 'trunk' || type === 'primary') return { color: "#fbbf24", weight: 3, opacity: 0.8 };
+                return { color: "#475569", weight: 0.5, opacity: 0.4 };
+            }
+        });
+
+        // 4. Hotspots (Red/Blue)
+        const hotLayer = L.geoJSON(hotspotData, {
+            style: function(feature) {
+                const z = feature.properties.z_score;
+                if (z > 1.96) return { color: "#ef4444", weight: 0, fillOpacity: 0.5 };
+                if (z < -1.96) return { color: "#3b82f6", weight: 0, fillOpacity: 0.3 };
+                return { stroke: false, fill: false };
+            }
+        });
+
+        // 5. Isochrones (Green)
+        const isoLayer = L.geoJSON(isochroneData, {
+            style: { color: "#10b981", weight: 1, fillOpacity: 0.2 }
+        });
+
+        // 6. Logistics Route
+        const routeLayer = L.geoJSON(routeData, {
+            style: { color: "#0ea5e9", weight: 4, opacity: 1, dashArray: "10 5" },
+            onEachFeature: function (feature, layer) {
+                const desc = feature.properties.summary || "Optimized VRP Circuit";
+                layer.bindPopup(`<div class='font-bold text-sky-400'>ROUTE</div><div>${desc}</div>`);
+            }
+        });
+
+        // 7. Stops
+        const stopsLayer = L.geoJSON(stopsData, {
+            pointToLayer: (feature, latlng) => L.circleMarker(latlng, { radius: 6, fillColor: "#fff", color: "#000", weight: 1, fillOpacity: 1 }),
+            onEachFeature: (feature, layer) => {
+                if(feature.properties.Sequence) {
+                   layer.bindTooltip(String(feature.properties.Sequence), {permanent: true, direction: 'center', className: 'text-xs font-bold'});
+                }
+            }
+        });
+
+        // 8. POIs
+        const poiLayer = L.geoJSON(poiData, {
+            pointToLayer: (feature, latlng) => L.circleMarker(latlng, { radius: 4, fillColor: "#10b981", color: "#fff", weight: 1, fillOpacity: 0.9 }),
+            onEachFeature: (feature, layer) => layer.bindPopup(feature.properties.name)
+        });
+
+        // --- 4. LAYER CONTROLS ---
+
+        // Auto-add layers if data exists
+        if(Object.keys(boundaryData).length) {
+            boundaryLayer.addTo(map);
+            map.fitBounds(boundaryLayer.getBounds()); // Zoom to Uyo
+        }
+        if(Object.keys(routeData).length) routeLayer.addTo(map);
+        if(Object.keys(stopsData).length) stopsLayer.addTo(map);
+        if(Object.keys(hotspotData).length) hotLayer.addTo(map);
+
+        const overlays = {
+            "📏 Study Area": boundaryLayer,
+            "🚛 Logistics Route": routeLayer,
+            "📍 Delivery Sequence": stopsLayer,
+            "⏱️ Accessibility Rings": isoLayer,
+            "🔥 Market Hotspots": hotLayer,
+            "🛣️ Road Network": roadLayer,
+            "🏦 Key Landmarks": poiLayer,
+            "🏙️ Building Density": bldLayer
+        };
+
+        L.control.layers(null, overlays, { collapsed: false, position: 'bottomright' }).addTo(map);
+
+    </script>
+</body>
+</html>
