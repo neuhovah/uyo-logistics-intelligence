@@ -99,12 +99,14 @@
 
         // 3. Roads (Hierarchical Styling)
         const roadLayer = L.geoJSON(roadsData, {
-            pane: 'roadPane', 
+            pane: 'roadPane',
             style: function(feature) {
-                const type = feature.properties.highway;
-                if (type === 'motorway' || type === 'trunk') return { color: "#d7191c", weight: 3.5, opacity: 1 };
-                if (type === 'primary') return { color: "#fdae61", weight: 2.5, opacity: 0.9 };
-                if (type === 'secondary') return { color: "#475569", weight: 1.5, opacity: 0.8 };
+                // Bulletproof check: looks for multiple column names and forces lowercase
+                const type = String(feature.properties.highway || feature.properties.Road_Class || feature.properties.type || "").toLowerCase();
+                
+                if (type.includes('motorway') || type.includes('trunk')) return { color: "#d7191c", weight: 3.5, opacity: 1 };
+                if (type.includes('primary')) return { color: "#fdae61", weight: 2.5, opacity: 0.9 };
+                if (type.includes('secondary')) return { color: "#475569", weight: 1.5, opacity: 0.8 };
                 return { color: "#cccccc", weight: 0.5, opacity: 0.4 }; 
             }
         });
@@ -135,18 +137,19 @@
         // 6. Logistics Route (VRP Graph-Theory with Flow Direction)
         const routeLayer = L.featureGroup(); 
         
-        const routeLine = L.geoJSON(routeData, {
+        L.geoJSON(routeData, {
             pane: 'routePane',
-            style: { color: "#0ea5e9", weight: 5, opacity: 0.9, dashArray: "8 4" },
+            style: { color: "#0ea5e9", weight: 5, opacity: 0.9 },
             onEachFeature: function (feature, layer) {
                 const desc = feature.properties.summary || "Optimized VRP Circuit: 44.42km";
-                layer.bindPopup(`<div class='font-bold text-sky-400'>ROUTE</div><div>${desc}</div><div class='text-xs text-slate-500 mt-1'>Efficiency Gain: 56%</div>`);
+                layer.bindPopup("<div class='font-bold text-sky-400'>ROUTE</div><div>" + desc + "</div><div class='text-xs text-slate-500 mt-1'>Efficiency Gain: 56%</div>");
+                
+                // Draw arrows directly on the geometry segment
+                const myArrow = L.Symbol.arrowHead({pixelSize: 12, pathOptions: {fillOpacity: 1, weight: 0, color: '#0f172a'}});
+                const myPattern = {offset: 25, repeat: 80, symbol: myArrow};
+                L.polylineDecorator(layer, { patterns: Array.of(myPattern) }).addTo(routeLayer);
             }
         }).addTo(routeLayer);
-
-        const myArrow = L.Symbol.arrowHead({pixelSize: 14, pathOptions: {fillOpacity: 1, weight: 0, color: '#0ea5e9'}});
-        const myPattern = {offset: 25, repeat: 80, symbol: myArrow};
-        L.polylineDecorator(routeLine, { patterns: Array.of(myPattern) }).addTo(routeLayer);
 
         // 7. Delivery Sequence Stops
         const stopsLayer = L.geoJSON(delivery_sequenceData, {
@@ -182,9 +185,9 @@
             else if (category.includes('Fuel')) { iconClass = 'fa-solid fa-gas-pump'; color = '#14b8a6'; } 
             else if (category.includes('Gover')) { iconClass = 'fa-solid fa-landmark'; color = '#0ea5e9'; } 
 
-            const htmlString = `<div style="background-color: ${color}; color: white; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.4);"><i class="${iconClass} text-xs"></i></div>`;
+            const htmlString = `<div style="background-color: ${color}; color: white; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.4);"><i class="${iconClass}" style="font-size: 8px;"></i></div>`;
 
-            return L.divIcon({ html: htmlString, className: 'custom-poi', iconSize: [24, 24], iconAnchor: [12, 12], popupAnchor: [0, -12] });
+            return L.divIcon({ html: htmlString, className: 'custom-poi', iconSize: [16, 16], iconAnchor: [8, 8], popupAnchor: [0, -8] });
         }
 
         const poiLayer = L.geoJSON(poiData, {
