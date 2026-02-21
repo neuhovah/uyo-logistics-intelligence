@@ -7,8 +7,9 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/leaflet-polylinedecorator@1.6.4/dist/leaflet.polylineDecorator.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
 
     <script src="data/boundary.js"></script>
     <script src="data/buildings.js"></script>
@@ -23,18 +24,18 @@
         body { margin: 0; background-color: #0f172a; color: #e2e8f0; font-family: sans-serif; }
         #map { height: 100vh; width: 100%; z-index: 1; }
         
-        .dashboard-panel {
+       .dashboard-panel {
             position: absolute; top: 20px; left: 20px; z-index: 2000;
             background: rgba(15, 23, 42, 0.95); padding: 20px; border-radius: 12px;
             border: 1px solid #334155; max-width: 320px;
         }
         
-        .leaflet-control-layers {
-            background-color: #1e293b !important;
-            border: 2px solid #38bdf8 !important;
-            color: #f8fafc !important;
-            border-radius: 8px !important;
-            padding: 10px !important;
+       .leaflet-control-layers {
+            background-color: #1e293b!important;
+            border: 2px solid #38bdf8!important;
+            color: #f8fafc!important;
+            border-radius: 8px!important;
+            padding: 10px!important;
         }
     </style>
 </head>
@@ -62,7 +63,6 @@
     <div id="map"></div>
 
     <script>
-        
          // --- 2. MAP SETUP ---
         const map = L.map('map', {zoomControl: false}).setView([5.0377, 7.9128], 13);
         L.control.zoom({position: 'bottomleft'}).addTo(map);
@@ -99,19 +99,21 @@
 
         // 3. Roads (Hierarchical Styling)
         const roadLayer = L.geoJSON(roadsData, {
-            pane: 'roadPane', // Forces roads above hotspots
+            pane: 'roadPane', 
             style: function(feature) {
                 const type = feature.properties.highway;
-                if (type === 'motorway' || type === 'trunk') return { color: "#d7191c", weight: 3.5, opacity: 1 };
+                if (type === 'motorway' |
+
+| type === 'trunk') return { color: "#d7191c", weight: 3.5, opacity: 1 };
                 if (type === 'primary') return { color: "#fdae61", weight: 2.5, opacity: 0.9 };
                 if (type === 'secondary') return { color: "#475569", weight: 1.5, opacity: 0.8 };
-                return { color: "#cccccc", weight: 0.5, opacity: 0.4 }; // Lighter grey for residential
+                return { color: "#cccccc", weight: 0.5, opacity: 0.4 }; 
             }
         });
 
         // 4. Hotspots (Getis-Ord Gi* Spatial Econometrics)
         const hotLayer = L.geoJSON(hotspotData, {
-            pane: 'hotspotPane', // Forces hotspots to the bottom
+            pane: 'hotspotPane', 
             style: function(feature) {
                 const z = feature.properties.z_score; 
                 if (z > 2.58) return { color: "white", weight: 1, fillColor: "#d7191c", fillOpacity: 0.7 }; 
@@ -125,10 +127,7 @@
         // 5. Isochrones (Dijkstra Service Catchments)
         const isoLayer = L.geoJSON(isochroneData, {
             style: function(feature) {
-                // Pointing to your exact QGIS attribute name
                 const timeInSeconds = feature.properties.cost_level; 
-                
-                // Styling based on the 300s (5m), 600s (10m), and 900s (15m) thresholds
                 if (timeInSeconds <= 300) return { color: "white", weight: 1, fillColor: "#006837", fillOpacity: 0.6 };
                 if (timeInSeconds <= 600) return { color: "white", weight: 1, fillColor: "#31a354", fillOpacity: 0.4 };
                 return { color: "white", weight: 1, fillColor: "#78c679", fillOpacity: 0.2 };
@@ -136,30 +135,25 @@
         });
 
         // 6. Logistics Route (VRP Graph-Theory with Flow Direction)
-        const routeLayer = L.featureGroup(); // Create a group to hold both line and arrows
+        const routeLayer = L.featureGroup(); 
         
         const routeLine = L.geoJSON(routeData, {
             pane: 'routePane',
             style: { color: "#0ea5e9", weight: 5, opacity: 0.9, dashArray: "8 4" },
             onEachFeature: function (feature, layer) {
-                const desc = feature.properties.summary || "Optimized VRP Circuit: 44.42km";
+                const desc = feature.properties.summary |
+
+| "Optimized VRP Circuit: 44.42km";
                 layer.bindPopup(`<div class='font-bold text-sky-400'>ROUTE</div><div>${desc}</div><div class='text-xs text-slate-500 mt-1'>Efficiency Gain: 56%</div>`);
             }
         }).addTo(routeLayer);
 
-       // 1. Define the arrow shape and color
         const myArrow = L.Symbol.arrowHead({pixelSize: 14, pathOptions: {fillOpacity: 1, weight: 0, color: '#0ea5e9'}});
-
-        // 2. Define how often the arrow repeats
         const myPattern = {offset: 25, repeat: 80, symbol: myArrow};
-
-        // 3. Apply it to the map
-        L.polylineDecorator(routeLine, {
-        patterns: Array.of(myPattern)
-        }).addTo(routeLayer);
+        L.polylineDecorator(routeLine, { patterns: Array.of(myPattern) }).addTo(routeLayer);
 
         // 7. Delivery Sequence Stops
-        const stopsLayer = L.geoJSON(stopsData, {
+        const stopsLayer = L.geoJSON(delivery_sequenceData, {
             pointToLayer: (feature, latlng) => L.circleMarker(latlng, { 
                 radius: 7, fillColor: "#ffffff", color: "#0ea5e9", weight: 2, fillOpacity: 1 
             }),
@@ -169,7 +163,9 @@
                 }
                 layer.bindPopup(
                     "<div class='font-sans'>" +
-                    "<b>Node ID:</b> " + (feature.properties.Sequence || "N/A") + "<br>" +
+                    "<b>Node ID:</b> " + (feature.properties.Sequence |
+
+| "N/A") + "<br>" +
                     "<b>Positional Accuracy:</b> ±2.14m RMSE" +
                     "</div>"
                 );
@@ -184,10 +180,14 @@
             if (!category) return L.divIcon({className: 'hidden'});
             
             if (category.includes('School')) { iconClass = 'fa-solid fa-graduation-cap'; color = '#3b82f6'; } 
-            else if (category.includes('Health') || category.includes('Hospit')) { iconClass = 'fa-solid fa-kit-medical'; color = '#ef4444'; } 
+            else if (category.includes('Health') |
+
+| category.includes('Hospit')) { iconClass = 'fa-solid fa-kit-medical'; color = '#ef4444'; } 
             else if (category.includes('Hotel')) { iconClass = 'fa-solid fa-bed'; color = '#8b5cf6'; } 
             else if (category.includes('Bank')) { iconClass = 'fa-solid fa-building-columns'; color = '#eab308'; } 
-            else if (category.includes('Worship') || category.includes('Churc')) { iconClass = 'fa-solid fa-church'; color = '#d946ef'; } 
+            else if (category.includes('Worship') |
+
+| category.includes('Churc')) { iconClass = 'fa-solid fa-church'; color = '#d946ef'; } 
             else if (category.includes('Restau')) { iconClass = 'fa-solid fa-utensils'; color = '#f97316'; } 
             else if (category.includes('Fuel')) { iconClass = 'fa-solid fa-gas-pump'; color = '#14b8a6'; } 
             else if (category.includes('Gover')) { iconClass = 'fa-solid fa-landmark'; color = '#0ea5e9'; } 
@@ -197,25 +197,27 @@
             return L.divIcon({ html: htmlString, className: 'custom-poi', iconSize: [24, 24], iconAnchor: [12, 12], popupAnchor: [0, -12] });
         }
 
-        codnst poiLayer = L.geoJSON(poiData, {
+        const poiLayer = L.geoJSON(poiData, {
             pane: 'poiPane',
             pointToLayer: function (feature, latlng) {
-                // Change 'cat_label' below if your QGIS column is named differently
                 return L.marker(latlng, { icon: getPoiIcon(feature.properties.cat_label) });
             },
-            onEachFeature: (feature, layer) => layer.bindPopup(`<b>${feature.properties.name || feature.properties.cat_label || 'Landmark'}</b>`)
+            onEachFeature: (feature, layer) => layer.bindPopup(`<b>${feature.properties.name |
+
+| feature.properties.cat_label |
+| 'Landmark'}</b>`)
         });
 
         // --- 4. LAYER CONTROLS ---
 
         // Auto-add layers if data exists
-        if(Object.keys(boundaryData).length) {
+        if(typeof boundaryData!== 'undefined') {
             boundaryLayer.addTo(map);
             map.fitBounds(boundaryLayer.getBounds()); // Zoom to Uyo
         }
-        if(Object.keys(routeData).length) routeLayer.addTo(map);
-        if(Object.keys(stopsData).length) stopsLayer.addTo(map);
-        if(Object.keys(hotspotData).length) hotLayer.addTo(map);
+        if(typeof routeData!== 'undefined') routeLayer.addTo(map);
+        if(typeof delivery_sequenceData!== 'undefined') stopsLayer.addTo(map);
+        if(typeof hotspotData!== 'undefined') hotLayer.addTo(map);
 
         const overlays = {
             "📏 Study Area": boundaryLayer,
