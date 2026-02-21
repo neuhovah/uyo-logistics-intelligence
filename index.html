@@ -102,9 +102,7 @@
             pane: 'roadPane', 
             style: function(feature) {
                 const type = feature.properties.highway;
-                if (type === 'motorway' |
-
-| type === 'trunk') return { color: "#d7191c", weight: 3.5, opacity: 1 };
+                if (type === 'motorway' || type === 'trunk') return { color: "#d7191c", weight: 3.5, opacity: 1 };
                 if (type === 'primary') return { color: "#fdae61", weight: 2.5, opacity: 0.9 };
                 if (type === 'secondary') return { color: "#475569", weight: 1.5, opacity: 0.8 };
                 return { color: "#cccccc", weight: 0.5, opacity: 0.4 }; 
@@ -141,9 +139,7 @@
             pane: 'routePane',
             style: { color: "#0ea5e9", weight: 5, opacity: 0.9, dashArray: "8 4" },
             onEachFeature: function (feature, layer) {
-                const desc = feature.properties.summary |
-
-| "Optimized VRP Circuit: 44.42km";
+                const desc = feature.properties.summary || "Optimized VRP Circuit: 44.42km";
                 layer.bindPopup(`<div class='font-bold text-sky-400'>ROUTE</div><div>${desc}</div><div class='text-xs text-slate-500 mt-1'>Efficiency Gain: 56%</div>`);
             }
         }).addTo(routeLayer);
@@ -163,9 +159,7 @@
                 }
                 layer.bindPopup(
                     "<div class='font-sans'>" +
-                    "<b>Node ID:</b> " + (feature.properties.Sequence |
-
-| "N/A") + "<br>" +
+                    "<b>Node ID:</b> " + (feature.properties.Sequence || "N/A") + "<br>" +
                     "<b>Positional Accuracy:</b> ±2.14m RMSE" +
                     "</div>"
                 );
@@ -180,14 +174,10 @@
             if (!category) return L.divIcon({className: 'hidden'});
             
             if (category.includes('School')) { iconClass = 'fa-solid fa-graduation-cap'; color = '#3b82f6'; } 
-            else if (category.includes('Health') |
-
-| category.includes('Hospit')) { iconClass = 'fa-solid fa-kit-medical'; color = '#ef4444'; } 
+            else if (category.includes('Health') || category.includes('Hospit')) { iconClass = 'fa-solid fa-kit-medical'; color = '#ef4444'; } 
             else if (category.includes('Hotel')) { iconClass = 'fa-solid fa-bed'; color = '#8b5cf6'; } 
             else if (category.includes('Bank')) { iconClass = 'fa-solid fa-building-columns'; color = '#eab308'; } 
-            else if (category.includes('Worship') |
-
-| category.includes('Churc')) { iconClass = 'fa-solid fa-church'; color = '#d946ef'; } 
+            else if (category.includes('Worship') || category.includes('Churc')) { iconClass = 'fa-solid fa-church'; color = '#d946ef'; } 
             else if (category.includes('Restau')) { iconClass = 'fa-solid fa-utensils'; color = '#f97316'; } 
             else if (category.includes('Fuel')) { iconClass = 'fa-solid fa-gas-pump'; color = '#14b8a6'; } 
             else if (category.includes('Gover')) { iconClass = 'fa-solid fa-landmark'; color = '#0ea5e9'; } 
@@ -202,10 +192,7 @@
             pointToLayer: function (feature, latlng) {
                 return L.marker(latlng, { icon: getPoiIcon(feature.properties.cat_label) });
             },
-            onEachFeature: (feature, layer) => layer.bindPopup(`<b>${feature.properties.name |
-
-| feature.properties.cat_label |
-| 'Landmark'}</b>`)
+            onEachFeature: (feature, layer) => layer.bindPopup(`<b>${feature.properties.name || feature.properties.cat_label || 'Landmark'}</b>`)
         });
 
         // --- 4. LAYER CONTROLS ---
