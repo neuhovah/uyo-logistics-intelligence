@@ -97,19 +97,32 @@
             style: { color: "#334155", weight: 0.5, fillOpacity: 0.2 }
         });
 
-        // 3. Roads (Hierarchical Styling)
-        const roadLayer = L.geoJSON(roadsData, {
+        // 3. Roads (Hierarchical Styling with Survey-Grade Casing)
+        const roadGroup = L.layerGroup(); // Groups casing and fill together
+
+        // 3A. The Casing (White background border)
+        L.geoJSON(roadsData, {
             pane: 'roadPane',
             style: function(feature) {
-                // Bulletproof check: looks for multiple column names and forces lowercase
-                const type = String(feature.properties.highway || feature.properties.Road_Class || feature.properties.type || "").toLowerCase();
-                
-                if (type.includes('motorway') || type.includes('trunk')) return { color: "#d7191c", weight: 3.5, opacity: 1 };
-                if (type.includes('primary')) return { color: "#fdae61", weight: 2.5, opacity: 0.9 };
-                if (type.includes('secondary')) return { color: "#475569", weight: 1.5, opacity: 0.8 };
-                return { color: "#cccccc", weight: 0.5, opacity: 0.4 }; 
+                const type = String(feature.properties.highway || feature.properties.Road_Class || "").toLowerCase();
+                if (type.includes('motorway') || type.includes('trunk')) return { color: "#ffffff", weight: 6, opacity: 1 };
+                if (type.includes('primary')) return { color: "#ffffff", weight: 4.5, opacity: 1 };
+                if (type.includes('secondary')) return { color: "#ffffff", weight: 3.5, opacity: 1 };
+                return { color: "#ffffff", weight: 2, opacity: 0.6 }; 
             }
-        });
+        }).addTo(roadGroup);
+
+        // 3B. The Core (Colored center)
+        L.geoJSON(roadsData, {
+            pane: 'roadPane',
+            style: function(feature) {
+                const type = String(feature.properties.highway || feature.properties.Road_Class || "").toLowerCase();
+                if (type.includes('motorway') || type.includes('trunk')) return { color: "#d7191c", weight: 3.5, opacity: 1 };
+                if (type.includes('primary')) return { color: "#fdae61", weight: 2.5, opacity: 1 };
+                if (type.includes('secondary')) return { color: "#475569", weight: 1.5, opacity: 1 };
+                return { color: "#a8a29e", weight: 0.5, opacity: 0.8 }; 
+            }
+        }).addTo(roadGroup);
 
         // 4. Hotspots (Getis-Ord Gi* Spatial Econometrics)
         const hotLayer = L.geoJSON(hotspotData, {
@@ -185,9 +198,11 @@
             else if (category.includes('Fuel')) { iconClass = 'fa-solid fa-gas-pump'; color = '#14b8a6'; } 
             else if (category.includes('Gover')) { iconClass = 'fa-solid fa-landmark'; color = '#0ea5e9'; } 
 
-            const htmlString = `<div style="background-color: ${color}; color: white; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.4);"><i class="${iconClass}" style="font-size: 8px;"></i></div>`;
+            // Shrunk to 14px with a 7px font size
+            const htmlString = `<div style="background-color: ${color}; color: white; width: 14px; height: 14px; border-radius: 50%; border: 1px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.5);"><i class="${iconClass}" style="font-size: 7px;"></i></div>`;
 
-            return L.divIcon({ html: htmlString, className: 'custom-poi', iconSize: [16, 16], iconAnchor: [8, 8], popupAnchor: [0, -8] });
+            // Anchors updated to perfectly center the new 14px size
+            return L.divIcon({ html: htmlString, className: 'custom-poi', iconSize: [14, 14], iconAnchor: [7, 7], popupAnchor: [0, -7] });
         }
 
         const poiLayer = L.geoJSON(poiData, {
@@ -215,13 +230,32 @@
             "📍 Delivery Sequence": stopsLayer,
             "⏱️ Accessibility Rings": isoLayer,
             "🔥 Market Hotspots": hotLayer,
-            "🛣️ Road Network": roadLayer,
+            "🛣️ Road Network": roadGroup,
             "🏦 Key Landmarks": poiLayer,
             "🏙️ Building Density": bldLayer
         };
 
         L.control.layers(null, overlays, { collapsed: false, position: 'bottomright' }).addTo(map);
 
+        // --- 5. SCALE-DEPENDENT VISIBILITY ---
+        // Dynamically hide/show POIs based on zoom level to prevent clutter
+        map.on('zoomend', function() {
+            const currentZoom = map.getZoom();
+            
+            // If zoomed out beyond level 14, hide the POIs
+            if (currentZoom < 14) {
+                if (map.hasLayer(poiLayer)) {
+                    map.removeLayer(poiLayer);
+                }
+            } 
+            // If zoomed in close enough, show them
+            else {
+                // Ensure it is checked in the layer control before auto-adding
+                if (!map.hasLayer(poiLayer)) {
+                    map.addLayer(poiLayer);
+                }
+            }
+        });
     </script>
 </body>
 </html>
