@@ -197,7 +197,7 @@
             return L.divIcon({ html: htmlString, className: 'custom-poi', iconSize: [24, 24], iconAnchor: [12, 12], popupAnchor: [0, -12] });
         }
 
-        const poiLayer = L.geoJSON(poiData, {
+        codnst poiLayer = L.geoJSON(poiData, {
             pane: 'poiPane',
             pointToLayer: function (feature, latlng) {
                 // Change 'cat_label' below if your QGIS column is named differently
