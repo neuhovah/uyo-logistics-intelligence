@@ -1,4 +1,4 @@
-const stopsData = {"type": "FeatureCollection",
+const delivery_sequenceData = {"type": "FeatureCollection",
 "name": "Delivery Sequence",
 "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
 "features": [
