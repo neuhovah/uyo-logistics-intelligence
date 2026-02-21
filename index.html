@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uyo Prime | Integrated Spatial Intelligence</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-polylinedecorator@1.6.4/dist/leaflet.polylineDecorator.min.js"></script>
+
+    <script src="data/boundary.js"></script>
+    <script src="data/buildings.js"></script>
+    <script src="data/roads.js"></script>
+    <script src="data/hotspots.js"></script>
+    <script src="data/isochrones.js"></script>
+    <script src="data/route.js"></script>
+    <script src="data/poi.js"></script>
+    <script src="data/delivery_sequence.js"></script>
+
+    <style>
+        body { margin: 0; background-color: #0f172a; color: #e2e8f0; font-family: sans-serif; }
+        #map { height: 100vh; width: 100%; z-index: 1; }
+        
+        .dashboard-panel {
+            position: absolute; top: 20px; left: 20px; z-index: 2000;
+            background: rgba(15, 23, 42, 0.95); padding: 20px; border-radius: 12px;
+            border: 1px solid #334155; max-width: 320px;
+        }
+        
+        .leaflet-control-layers {
+            background-color: #1e293b !important;
+            border: 2px solid #38bdf8 !important;
+            color: #f8fafc !important;
+            border-radius: 8px !important;
+            padding: 10px !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-panel">
+        <h1 class="text-xl font-bold text-sky-400 mb-4">UYO PRIME <span class="text-white">.AI</span></h1>
+        
+        <div class="grid grid-cols-2 gap-3 mb-4">
+            <div class="bg-slate-800 p-3 rounded border border-slate-700 text-center">
+                <div class="text-2xl font-bold text-white">56%</div>
+                <div class="text-xs text-slate-400">VRP Efficiency</div>
+            </div>
+            <div class="bg-slate-800 p-3 rounded border-slate-700 text-center">
+                <div class="text-2xl font-bold text-white">₦195k</div>
+                <div class="text-xs text-slate-400">Monthly Savings</div>
+            </div>
+        </div>
+        <div class="text-xs text-slate-400 space-y-2">
+            <p><strong>System Status:</strong> <span class="text-emerald-400">Online</span></p>
+            <p>Toggle layers (bottom right) to visualize market density and logistical flow.</p>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <script>
+        
+         // --- 2. MAP SETUP ---
+        const map = L.map('map', {zoomControl: false}).setView([5.0377, 7.9128], 13);
+        L.control.zoom({position: 'bottomleft'}).addTo(map);
+
+        // 1. Change to Light/White Basemap
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; CARTO', maxZoom: 20
+        }).addTo(map);
+
+        // 2. Create Custom Panes for strict Z-Index ordering
+        map.createPane('hotspotPane');
+        map.getPane('hotspotPane').style.zIndex = 401; // Bottom
+
+        map.createPane('roadPane');
+        map.getPane('roadPane').style.zIndex = 402; // Above Hotspots
+
+        map.createPane('routePane');
+        map.getPane('routePane').style.zIndex = 403; // Above Roads
+
+        map.createPane('poiPane');
+        map.getPane('poiPane').style.zIndex = 404; // Topmost
+
+       // --- 3. LAYER CREATION (SURVEY-GRADE SYMBOLOGY) ---
+
+        // 1. Boundary (The Frame)
+        const boundaryLayer = L.geoJSON(boundaryData, {
+            style: { color: "#cbd5e1", weight: 2, fillOpacity: 0, dashArray: "10 5" }
+        });
+
+        // 2. Buildings (Morphological Density)
+        const bldLayer = L.geoJSON(buildingsData, {
+            style: { color: "#334155", weight: 0.5, fillOpacity: 0.2 }
+        });
+
+        // 3. Roads (Hierarchical Styling)
+        const roadLayer = L.geoJSON(roadsData, {
+            pane: 'roadPane', // Forces roads above hotspots
+            style: function(feature) {
+                const type = feature.properties.highway;
+                if (type === 'motorway' || type === 'trunk') return { color: "#d7191c", weight: 3.5, opacity: 1 };
+                if (type === 'primary') return { color: "#fdae61", weight: 2.5, opacity: 0.9 };
+                if (type === 'secondary') return { color: "#475569", weight: 1.5, opacity: 0.8 };
+                return { color: "#cccccc", weight: 0.5, opacity: 0.4 }; // Lighter grey for residential
+            }
+        });
+
+        // 4. Hotspots (Getis-Ord Gi* Spatial Econometrics)
+        const hotLayer = L.geoJSON(hotspotData, {
+            pane: 'hotspotPane', // Forces hotspots to the bottom
+            style: function(feature) {
+                const z = feature.properties.z_score; 
+                if (z > 2.58) return { color: "white", weight: 1, fillColor: "#d7191c", fillOpacity: 0.7 }; 
+                if (z > 1.96) return { color: "white", weight: 1, fillColor: "#fdae61", fillOpacity: 0.6 }; 
+                if (z < -2.58) return { color: "white", weight: 1, fillColor: "#2c7bb6", fillOpacity: 0.7 }; 
+                if (z < -1.96) return { color: "white", weight: 1, fillColor: "#abd9e9", fillOpacity: 0.6 }; 
+                return { stroke: false, fill: false }; 
+            }
+        });
+
+        // 5. Isochrones (Dijkstra Service Catchments)
+        const isoLayer = L.geoJSON(isochroneData, {
+            style: function(feature) {
+                // Pointing to your exact QGIS attribute name
+                const timeInSeconds = feature.properties.cost_level; 
+                
+                // Styling based on the 300s (5m), 600s (10m), and 900s (15m) thresholds
+                if (timeInSeconds <= 300) return { color: "white", weight: 1, fillColor: "#006837", fillOpacity: 0.6 };
+                if (timeInSeconds <= 600) return { color: "white", weight: 1, fillColor: "#31a354", fillOpacity: 0.4 };
+                return { color: "white", weight: 1, fillColor: "#78c679", fillOpacity: 0.2 };
+            }
+        });
+
+        // 6. Logistics Route (VRP Graph-Theory with Flow Direction)
+<<<<<<< HEAD
+        const routeLayer = L.featureGroup(); // Create a group to hold both line and arrows
+        
+        const routeLine = L.geoJSON(routeData, {
+            pane: 'routePane',
+            style: { color: "#0ea5e9", weight: 5, opacity: 0.9, dashArray: "8 4" },
+=======
+        const routeLayer = L.featureGroup(); // Use a group to hold both the line and the arrows
+        
+        const routeLine = L.geoJSON(routeData, {
+            pane: 'routePane',
+            style: { color: "#0ea5e9", weight: 4, opacity: 0.9 },
+>>>>>>> 4686d815fa2b6d527da6d0479308c0858053ccce
+            onEachFeature: function (feature, layer) {
+                const desc = feature.properties.summary || "Optimized VRP Circuit: 44.42km";
+                layer.bindPopup(`<div class='font-bold text-sky-400'>ROUTE</div><div>${desc}</div><div class='text-xs text-slate-500 mt-1'>Efficiency Gain: 56%</div>`);
+            }
+        }).addTo(routeLayer);
+
+<<<<<<< HEAD
+       // 1. Define the arrow shape and color
+        const myArrow = L.Symbol.arrowHead({pixelSize: 14, pathOptions: {fillOpacity: 1, weight: 0, color: '#0ea5e9'}});
+
+        // 2. Define how often the arrow repeats
+        const myPattern = {offset: 25, repeat: 80, symbol: myArrow};
+
+        // 3. Apply it to the map
+        L.polylineDecorator(routeLine, {
+        patterns: Array.of(myPattern)
+=======
+        // Decorate the line with arrows
+        L.polylineDecorator(routeLine, {
+            patterns:
+>>>>>>> 4686d815fa2b6d527da6d0479308c0858053ccce
+        }).addTo(routeLayer);
+
+        // 7. Delivery Sequence Stops
+        const stopsLayer = L.geoJSON(stopsData, {
+            pointToLayer: (feature, latlng) => L.circleMarker(latlng, { 
+                radius: 7, fillColor: "#ffffff", color: "#0ea5e9", weight: 2, fillOpacity: 1 
+            }),
+            onEachFeature: (feature, layer) => {
+                if(feature.properties.Sequence) {
+                    layer.bindTooltip(String(feature.properties.Sequence), {permanent: true, direction: 'center', className: 'text-xs font-bold text-slate-800 bg-transparent border-0 shadow-none'});
+                }
+                layer.bindPopup(
+                    "<div class='font-sans'>" +
+                    "<b>Node ID:</b> " + (feature.properties.Sequence || "N/A") + "<br>" +
+                    "<b>Positional Accuracy:</b> ±2.14m RMSE" +
+                    "</div>"
+                );
+            }
+        });
+
+<<<<<<< HEAD
+        // 8. Key Landmarks (POIs) - Rule Based Symbology
+        function getPoiIcon(category) {
+            let iconClass = 'fa-solid fa-map-pin'; // Default
+            let color = '#71717a'; 
+            
+            if (!category) return L.divIcon({className: 'hidden'});
+            
+            if (category.includes('School')) { iconClass = 'fa-solid fa-graduation-cap'; color = '#3b82f6'; } 
+            else if (category.includes('Health') || category.includes('Hospit')) { iconClass = 'fa-solid fa-kit-medical'; color = '#ef4444'; } 
+            else if (category.includes('Hotel')) { iconClass = 'fa-solid fa-bed'; color = '#8b5cf6'; } 
+            else if (category.includes('Bank')) { iconClass = 'fa-solid fa-building-columns'; color = '#eab308'; } 
+            else if (category.includes('Worship') || category.includes('Churc')) { iconClass = 'fa-solid fa-church'; color = '#d946ef'; } 
+            else if (category.includes('Restau')) { iconClass = 'fa-solid fa-utensils'; color = '#f97316'; } 
+            else if (category.includes('Fuel')) { iconClass = 'fa-solid fa-gas-pump'; color = '#14b8a6'; } 
+            else if (category.includes('Gover')) { iconClass = 'fa-solid fa-landmark'; color = '#0ea5e9'; } 
+
+            const htmlString = `<div style="background-color: ${color}; color: white; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.4);"><i class="${iconClass} text-xs"></i></div>`;
+
+            return L.divIcon({ html: htmlString, className: 'custom-poi', iconSize: [24, 24], iconAnchor: [12, 12], popupAnchor: [0, -12] });
+        }
+
+        codnst poiLayer = L.geoJSON(poiData, {
+            pane: 'poiPane',
+            pointToLayer: function (feature, latlng) {
+                // Change 'cat_label' below if your QGIS column is named differently
+                return L.marker(latlng, { icon: getPoiIcon(feature.properties.cat_label) });
+            },
+            onEachFeature: (feature, layer) => layer.bindPopup(`<b>${feature.properties.name || feature.properties.cat_label || 'Landmark'}</b>`)
+=======
+        // 8. Key Landmarks (POIs)
+        const poiLayer = L.geoJSON(poiData, {
+            pointToLayer: (feature, latlng) => L.circleMarker(latlng, { radius: 5, fillColor: "#fbbf24", color: "#000", weight: 1, fillOpacity: 0.9 }),
+            onEachFeature: (feature, layer) => layer.bindPopup(`<b>${feature.properties.name || 'Landmark'}</b>`)
+>>>>>>> 4686d815fa2b6d527da6d0479308c0858053ccce
+        });
+
+        // --- 4. LAYER CONTROLS ---
+
+        // Auto-add layers if data exists
+        if(Object.keys(boundaryData).length) {
+            boundaryLayer.addTo(map);
+            map.fitBounds(boundaryLayer.getBounds()); // Zoom to Uyo
+        }
+        if(Object.keys(routeData).length) routeLayer.addTo(map);
+        if(Object.keys(stopsData).length) stopsLayer.addTo(map);
+        if(Object.keys(hotspotData).length) hotLayer.addTo(map);
+
+        const overlays = {
+            "📏 Study Area": boundaryLayer,
+            "🚛 Logistics Route": routeLayer,
+            "📍 Delivery Sequence": stopsLayer,
+            "⏱️ Accessibility Rings": isoLayer,
+            "🔥 Market Hotspots": hotLayer,
+            "🛣️ Road Network": roadLayer,
+            "🏦 Key Landmarks": poiLayer,
+            "🏙️ Building Density": bldLayer
+        };
+
+        L.control.layers(null, overlays, { collapsed: false, position: 'bottomright' }).addTo(map);
+
+    </script>
+</body>
+</html>
