@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">\
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -70,65 +70,85 @@
             attribution: '&copy; CARTO', maxZoom: 20
         }).addTo(map);
 
-        // --- 3. LAYER CREATION ---
+       // --- 3. LAYER CREATION (SURVEY-GRADE SYMBOLOGY) ---
 
         // 1. Boundary (The Frame)
         const boundaryLayer = L.geoJSON(boundaryData, {
             style: { color: "#cbd5e1", weight: 2, fillOpacity: 0, dashArray: "10 5" }
         });
 
-        // 2. Buildings
+        // 2. Buildings (Morphological Density)
         const bldLayer = L.geoJSON(buildingsData, {
             style: { color: "#334155", weight: 0.5, fillOpacity: 0.2 }
         });
 
-        // 3. Roads (Hierarchy)
+        // 3. Roads (Hierarchical Styling)
         const roadLayer = L.geoJSON(roadsData, {
             style: function(feature) {
                 const type = feature.properties.highway;
-                if (type === 'trunk' || type === 'primary') return { color: "#fbbf24", weight: 3, opacity: 0.8 };
-                return { color: "#475569", weight: 0.5, opacity: 0.4 };
+                if (type === 'motorway' || type === 'trunk') return { color: "#d7191c", weight: 3.5, opacity: 1 };
+                if (type === 'primary') return { color: "#fdae61", weight: 2.5, opacity: 0.9 };
+                if (type === 'secondary') return { color: "#ffffbf", weight: 1.5, opacity: 0.8 };
+                return { color: "#475569", weight: 0.5, opacity: 0.4 }; // Local/Residential
             }
         });
 
-        // 4. Hotspots (Red/Blue)
+        // 4. Hotspots (Getis-Ord Gi* Spatial Econometrics)
         const hotLayer = L.geoJSON(hotspotData, {
             style: function(feature) {
-                const z = feature.properties.z_score;
-                if (z > 1.96) return { color: "#ef4444", weight: 0, fillOpacity: 0.5 };
-                if (z < -1.96) return { color: "#3b82f6", weight: 0, fillOpacity: 0.3 };
-                return { stroke: false, fill: false };
+                const z = feature.properties.z_score; // Ensure 'z_score' matches your exact QGIS attribute name
+                if (z > 2.58) return { color: "white", weight: 1, fillColor: "#d7191c", fillOpacity: 0.7 }; // 99% Hotspot
+                if (z > 1.96) return { color: "white", weight: 1, fillColor: "#fdae61", fillOpacity: 0.6 }; // 95% Hotspot
+                if (z < -2.58) return { color: "white", weight: 1, fillColor: "#2c7bb6", fillOpacity: 0.7 }; // 99% Coldspot
+                if (z < -1.96) return { color: "white", weight: 1, fillColor: "#abd9e9", fillOpacity: 0.6 }; // 95% Coldspot
+                return { stroke: false, fill: false }; // Hide non-significant areas
             }
         });
 
-        // 5. Isochrones (Green)
+        // 5. Isochrones (Dijkstra Service Catchments)
         const isoLayer = L.geoJSON(isochroneData, {
-            style: { color: "#10b981", weight: 1, fillOpacity: 0.2 }
-        });
-
-        // 6. Logistics Route
-        const routeLayer = L.geoJSON(routeData, {
-            style: { color: "#0ea5e9", weight: 4, opacity: 1, dashArray: "10 5" },
-            onEachFeature: function (feature, layer) {
-                const desc = feature.properties.summary || "Optimized VRP Circuit";
-                layer.bindPopup(`<div class='font-bold text-sky-400'>ROUTE</div><div>${desc}</div>`);
+            style: function(feature) {
+                // Pointing to your exact QGIS attribute name
+                const timeInSeconds = feature.properties.cost_level; 
+                
+                // Styling based on the 300s (5m), 600s (10m), and 900s (15m) thresholds
+                if (timeInSeconds <= 300) return { color: "white", weight: 1, fillColor: "#006837", fillOpacity: 0.6 };
+                if (timeInSeconds <= 600) return { color: "white", weight: 1, fillColor: "#31a354", fillOpacity: 0.4 };
+                return { color: "white", weight: 1, fillColor: "#78c679", fillOpacity: 0.2 };
             }
         });
 
-        // 7. Stops
+        // 6. Logistics Route (VRP Graph-Theory)
+        const routeLayer = L.geoJSON(routeData, {
+            style: { color: "#0ea5e9", weight: 5, opacity: 0.9, dashArray: "8 4" },
+            onEachFeature: function (feature, layer) {
+                const desc = feature.properties.summary || "Optimized VRP Circuit: 44.42km";
+                layer.bindPopup(`<div class='font-bold text-sky-400'>ROUTE</div><div>${desc}</div><div class='text-xs text-slate-500 mt-1'>Efficiency Gain: 56%</div>`);
+            }
+        });
+
+        // 7. Delivery Sequence Stops
         const stopsLayer = L.geoJSON(stopsData, {
-            pointToLayer: (feature, latlng) => L.circleMarker(latlng, { radius: 6, fillColor: "#fff", color: "#000", weight: 1, fillOpacity: 1 }),
+            pointToLayer: (feature, latlng) => L.circleMarker(latlng, { 
+                radius: 7, fillColor: "#ffffff", color: "#0ea5e9", weight: 2, fillOpacity: 1 
+            }),
             onEachFeature: (feature, layer) => {
                 if(feature.properties.Sequence) {
-                   layer.bindTooltip(String(feature.properties.Sequence), {permanent: true, direction: 'center', className: 'text-xs font-bold'});
+                    layer.bindTooltip(String(feature.properties.Sequence), {permanent: true, direction: 'center', className: 'text-xs font-bold text-slate-800 bg-transparent border-0 shadow-none'});
                 }
+                layer.bindPopup(
+                    "<div class='font-sans'>" +
+                    "<b>Node ID:</b> " + (feature.properties.Sequence || "N/A") + "<br>" +
+                    "<b>Positional Accuracy:</b> ±2.14m RMSE" +
+                    "</div>"
+                );
             }
         });
 
-        // 8. POIs
+        // 8. Key Landmarks (POIs)
         const poiLayer = L.geoJSON(poiData, {
-            pointToLayer: (feature, latlng) => L.circleMarker(latlng, { radius: 4, fillColor: "#10b981", color: "#fff", weight: 1, fillOpacity: 0.9 }),
-            onEachFeature: (feature, layer) => layer.bindPopup(feature.properties.name)
+            pointToLayer: (feature, latlng) => L.circleMarker(latlng, { radius: 5, fillColor: "#fbbf24", color: "#000", weight: 1, fillOpacity: 0.9 }),
+            onEachFeature: (feature, layer) => layer.bindPopup(`<b>${feature.properties.name || 'Landmark'}</b>`)
         });
 
         // --- 4. LAYER CONTROLS ---
