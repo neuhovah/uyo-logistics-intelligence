@@ -65,25 +65,29 @@
     <script>
          // --- 2. MAP SETUP ---
         const map = L.map('map', {zoomControl: false}).setView([5.0377, 7.9128], 13);
-        L.control.zoom({position: 'bottomleft'}).addTo(map);
+        L.control.zoom({position: 'bottomright'}).addTo(map); // Moved zoom to right to make room for scale
 
-        // 1. Change to Light/White Basemap
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        // 1A. Bottom Bun: Light Basemap WITHOUT labels
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; CARTO', maxZoom: 20
         }).addTo(map);
 
         // 2. Create Custom Panes for strict Z-Index ordering
-        map.createPane('bottomPolygons'); 
-        map.getPane('bottomPolygons').style.zIndex = 401; // Base analytics
+        map.createPane('bottomPolygons'); map.getPane('bottomPolygons').style.zIndex = 401;
+        map.createPane('middleLines'); map.getPane('middleLines').style.zIndex = 402;
+        map.createPane('topRoutes'); map.getPane('topRoutes').style.zIndex = 403;
+        map.createPane('topPoints'); map.getPane('topPoints').style.zIndex = 404;
 
-        map.createPane('middleLines'); 
-        map.getPane('middleLines').style.zIndex = 402; // Street grids and boundaries
+        // 1B. Top Bun: Create a special pane just for the text labels
+        map.createPane('labelsPane');
+        map.getPane('labelsPane').style.zIndex = 650; // Forces labels above absolutely everything
+        map.getPane('labelsPane').style.pointerEvents = 'none'; // Ensures users can click through the text to the roads below
 
-        map.createPane('topRoutes'); 
-        map.getPane('topRoutes').style.zIndex = 403; // Active logistics paths
-
-        map.createPane('topPoints'); 
-        map.getPane('topPoints').style.zIndex = 404; // Landmarks and stops
+        // 1C. Top Bun: Add the Labels-only layer
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+            pane: 'labelsPane',
+            maxZoom: 20
+        }).addTo(map);
 
        // --- 3. LAYER CREATION (SURVEY-GRADE SYMBOLOGY) ---
 
@@ -229,6 +233,27 @@
 
         // Auto-zoom the map to perfectly frame the red boundary on load
         map.fitBounds(boundaryLayer.getBounds());
+
+        // --- ADD SCALE BAR ---
+        L.control.scale({position: 'bottomleft', metric: true, imperial: false}).addTo(map);
+
+        // --- ADD MAP LEGEND ---
+        const legend = L.control({position: 'bottomleft'});
+        legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'info legend bg-slate-900 p-4 rounded-lg border border-slate-700 text-slate-200 text-xs shadow-xl');
+            div.innerHTML += '<h4 class="font-bold text-sky-400 mb-2">Map Legend</h4>';
+            
+            div.innerHTML += '<div class="mb-1"><i style="background:#d7191c; width:12px; height:12px; display:inline-block; margin-right:5px;"></i> 99% Hotspot (Oversaturated)</div>';
+            div.innerHTML += '<div class="mb-1"><i style="background:#2c7bb6; width:12px; height:12px; display:inline-block; margin-right:5px;"></i> 99% Coldspot (Service Desert)</div>';
+            div.innerHTML += '<hr class="border-slate-700 my-2">';
+            div.innerHTML += '<div class="mb-1"><i style="background:#006837; width:12px; height:12px; display:inline-block; margin-right:5px;"></i> 5 Min Service Reach</div>';
+            div.innerHTML += '<div class="mb-1"><i style="background:#78c679; width:12px; height:12px; display:inline-block; margin-right:5px;"></i> 15 Min Service Reach</div>';
+            div.innerHTML += '<hr class="border-slate-700 my-2">';
+            div.innerHTML += '<div class="mb-1"><i style="background:#ef4444; width:12px; height:3px; display:inline-block; margin-right:5px; vertical-align:middle;"></i> City Boundary</div>';
+            
+            return div;
+        };
+        legend.addTo(map);
 
         // --- 5. SCALE-DEPENDENT VISIBILITY ---
         // Dynamically hide/show POIs based on zoom level to prevent clutter
