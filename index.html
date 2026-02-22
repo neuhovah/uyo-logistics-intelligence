@@ -73,33 +73,35 @@
         }).addTo(map);
 
         // 2. Create Custom Panes for strict Z-Index ordering
-        map.createPane('hotspotPane');
-        map.getPane('hotspotPane').style.zIndex = 401; // Bottom
+        map.createPane('bottomPolygons'); 
+        map.getPane('bottomPolygons').style.zIndex = 401; // Base analytics
 
-        map.createPane('roadPane');
-        map.getPane('roadPane').style.zIndex = 402; // Above Hotspots
+        map.createPane('middleLines'); 
+        map.getPane('middleLines').style.zIndex = 402; // Street grids and boundaries
 
-        map.createPane('routePane');
-        map.getPane('routePane').style.zIndex = 403; // Above Roads
+        map.createPane('topRoutes'); 
+        map.getPane('topRoutes').style.zIndex = 403; // Active logistics paths
 
-        map.createPane('poiPane');
-        map.getPane('poiPane').style.zIndex = 404; // Topmost
+        map.createPane('topPoints'); 
+        map.getPane('topPoints').style.zIndex = 404; // Landmarks and stops
 
        // --- 3. LAYER CREATION (SURVEY-GRADE SYMBOLOGY) ---
 
        // 1. Boundary (The Frame)
         const boundaryLayer = L.geoJSON(boundaryData, {
+            pane: 'middleLines',
             style: { color: "#ef4444", weight: 4, fillOpacity: 0, dashArray: "8 6" }
         });
 
         // 2. Buildings (Morphological Density)
         const bldLayer = L.geoJSON(buildingsData, {
+            pane: 'bottomPolygons',
             style: { color: "#334155", weight: 0.5, fillOpacity: 0.2 }
         });
 
         // 3. Roads (Hierarchical Styling for Light Basemap)
         const roadLayer = L.geoJSON(roadsData, {
-            pane: 'roadPane',
+            pane: 'middleLines',
             style: function(feature) {
                 const type = String(feature.properties.highway || feature.properties.Road_Class || "").toLowerCase();
                 
@@ -112,7 +114,7 @@
 
         // 4. Hotspots (Getis-Ord Gi* Spatial Econometrics)
         const hotLayer = L.geoJSON(hotspotData, {
-            pane: 'hotspotPane', 
+            pane: 'bottomPolygons',
             style: function(feature) {
                 const z = feature.properties.z_score; 
                 if (z > 2.58) return { color: "white", weight: 1, fillColor: "#d7191c", fillOpacity: 0.7 }; 
@@ -125,6 +127,7 @@
 
         // 5. Isochrones (Dijkstra Service Catchments)
         const isoLayer = L.geoJSON(isochroneData, {
+            pane: 'bottomPolygons',
             style: function(feature) {
                 const timeInSeconds = feature.properties.cost_level; 
                 if (timeInSeconds <= 300) return { color: "white", weight: 1, fillColor: "#006837", fillOpacity: 0.6 };
@@ -137,7 +140,7 @@
         const routeLayer = L.featureGroup(); 
         
         L.geoJSON(routeData, {
-            pane: 'routePane',
+            pane: 'topRoutes',
             style: { color: "#0ea5e9", weight: 5, opacity: 0.9 },
             onEachFeature: function (feature, layer) {
                 const desc = feature.properties.summary || "Optimized VRP Circuit: 44.42km";
@@ -152,6 +155,7 @@
 
         // 7. Delivery Sequence Stops
         const stopsLayer = L.geoJSON(delivery_sequenceData, {
+            pane: 'topPoints',
             pointToLayer: (feature, latlng) => L.circleMarker(latlng, { 
                 radius: 7, fillColor: "#ffffff", color: "#0ea5e9", weight: 2, fillOpacity: 1 
             }),
@@ -192,7 +196,7 @@
         }
 
         const poiLayer = L.geoJSON(poiData, {
-            pane: 'poiPane',
+            pane: 'topPoints',
             pointToLayer: function (feature, latlng) {
                 return L.marker(latlng, { icon: getPoiIcon(feature.properties.cat_label) });
             },
