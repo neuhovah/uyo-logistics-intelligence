@@ -89,7 +89,7 @@
 
         // 1. Boundary (The Frame)
         const boundaryLayer = L.geoJSON(boundaryData, {
-            style: { color: "#cbd5e1", weight: 2, fillOpacity: 0, dashArray: "10 5" }
+            style: { color: "#ef4444", weight: 4, fillOpacity: 0, dashArray: "8 6" }
         });
 
         // 2. Buildings (Morphological Density)
@@ -97,32 +97,18 @@
             style: { color: "#334155", weight: 0.5, fillOpacity: 0.2 }
         });
 
-        // 3. Roads (Hierarchical Styling with Survey-Grade Casing)
-        const roadGroup = L.layerGroup(); // Groups casing and fill together
-
-        // 3A. The Casing (White background border)
-        L.geoJSON(roadsData, {
+        // 3. Roads (Hierarchical Styling for Light Basemap)
+        const roadLayer = L.geoJSON(roadsData, {
             pane: 'roadPane',
             style: function(feature) {
                 const type = String(feature.properties.highway || feature.properties.Road_Class || "").toLowerCase();
-                if (type.includes('motorway') || type.includes('trunk')) return { color: "#ffffff", weight: 6, opacity: 1 };
-                if (type.includes('primary')) return { color: "#ffffff", weight: 4.5, opacity: 1 };
-                if (type.includes('secondary')) return { color: "#ffffff", weight: 3.5, opacity: 1 };
-                return { color: "#ffffff", weight: 2, opacity: 0.6 }; 
+                
+                if (type.includes('motorway') || type.includes('trunk')) return { color: "#d7191c", weight: 4, opacity: 1 };
+                if (type.includes('primary')) return { color: "#f59e0b", weight: 3, opacity: 1 };
+                if (type.includes('secondary')) return { color: "#334155", weight: 2, opacity: 0.9 };
+                return { color: "#94a3b8", weight: 1, opacity: 0.6 }; // Local/residential roads
             }
-        }).addTo(roadGroup);
-
-        // 3B. The Core (Colored center)
-        L.geoJSON(roadsData, {
-            pane: 'roadPane',
-            style: function(feature) {
-                const type = String(feature.properties.highway || feature.properties.Road_Class || "").toLowerCase();
-                if (type.includes('motorway') || type.includes('trunk')) return { color: "#d7191c", weight: 3.5, opacity: 1 };
-                if (type.includes('primary')) return { color: "#fdae61", weight: 2.5, opacity: 1 };
-                if (type.includes('secondary')) return { color: "#475569", weight: 1.5, opacity: 1 };
-                return { color: "#a8a29e", weight: 0.5, opacity: 0.8 }; 
-            }
-        }).addTo(roadGroup);
+        });
 
         // 4. Hotspots (Getis-Ord Gi* Spatial Econometrics)
         const hotLayer = L.geoJSON(hotspotData, {
@@ -230,12 +216,15 @@
             "📍 Delivery Sequence": stopsLayer,
             "⏱️ Accessibility Rings": isoLayer,
             "🔥 Market Hotspots": hotLayer,
-            "🛣️ Road Network": roadGroup,
+            "🛣️ Road Network": roadLayer,
             "🏦 Key Landmarks": poiLayer,
             "🏙️ Building Density": bldLayer
         };
 
         L.control.layers(null, overlays, { collapsed: false, position: 'bottomright' }).addTo(map);
+
+        // Auto-zoom the map to perfectly frame the red boundary on load
+        map.fitBounds(boundaryLayer.getBounds());
 
         // --- 5. SCALE-DEPENDENT VISIBILITY ---
         // Dynamically hide/show POIs based on zoom level to prevent clutter
