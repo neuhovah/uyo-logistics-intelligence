@@ -37,6 +37,32 @@
             border-radius: 8px!important;
             padding: 10px!important;
         }
+        /* --- MOBILE RESPONSIVE DESIGN --- */
+        @media (max-width: 768px) {
+           .dashboard-panel {
+                top: 10px; 
+                left: 10px; 
+                right: 10px; /* Forces it to fit within screen bounds */
+                max-width: calc(100% - 20px);
+                padding: 12px;
+            }
+           .dashboard-panel h1 {
+                font-size: 1.1rem;
+                margin-bottom: 0.5rem;
+            }
+           .dashboard-panel.grid {
+                gap: 0.25rem;
+            }
+           .dashboard-panel.text-2xl {
+                font-size: 1.25rem; /* Shrinks the 56% and ₦195k text */
+            }
+           .info.legend {
+                font-size: 10px;
+                padding: 8px;
+                max-width: 150px;
+                line-height: 1.2;
+            }
+        }
     </style>
 </head>
 <body>
@@ -229,7 +255,10 @@
             "🏙️ Building Density": bldLayer
         };
 
-        L.control.layers(null, overlays, { collapsed: false, position: 'bottomright' }).addTo(map);
+        L.control.layers(null, overlays, { 
+            collapsed: window.innerWidth < 768, // Auto-collapses on mobile, stays open on desktop
+            position: 'bottomright' 
+        }).addTo(map);
 
         // Auto-zoom the map to perfectly frame the red boundary on load
         map.fitBounds(boundaryLayer.getBounds());
